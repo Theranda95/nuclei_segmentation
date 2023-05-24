@@ -33,19 +33,44 @@ def check_sample_imgs():
 
 def main():
     # check_sample_imgs()
-    masks_path = 'data/masks/'
 
     X = sorted(glob('data/images/*.tif'))
     Y = sorted(glob('data/masks/*.tif'))
     print(X)
     print(Y)
+
+    # Match names of images and masks
     XY = zip(X, Y)
+    masks_path = 'data/masks/'
     # for x, y in XY:
     #     y_new = masks_path + x.split('/')[-1]
     #     print(y, y_new)
     #     os.rename(y, y_new)
 
     assert all(Path(x).name == Path(y).name for x, y in zip(X, Y))
+
+
+    X, Y = X[:10], Y[:10]
+    X = list(map(imread, X))
+    Y = list(map(imread, Y))
+
+    i = min(4, len(X) - 1)
+    img, lbl = X[i], fill_label_holes(Y[i])
+    assert img.ndim in (2, 3)
+    img = img if img.ndim == 2 else img[..., :3]
+    # assumed axes ordering of img and lbl is: YX(C)
+
+    plt.figure(figsize=(16, 10))
+    plt.subplot(121);
+    plt.imshow(img, cmap='gray');
+    plt.axis('off');
+    plt.title('Raw image')
+    plt.subplot(122);
+    plt.imshow(lbl, cmap=lbl_cmap);
+    plt.axis('off');
+    plt.title('GT labels')
+    plt.savefig('saving_img')
+    None;
 
 
 if __name__ == '__main__':
