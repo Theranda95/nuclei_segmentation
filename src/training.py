@@ -31,6 +31,36 @@ def plot_img_label(img, lbl, img_title="image", lbl_title="label", **kwargs):
     plt.savefig('image_for_training_sample')
 
 
+def random_fliprot(img, mask):
+    assert img.ndim >= mask.ndim
+    axes = tuple(range(mask.ndim))
+    perm = tuple(np.random.permutation(axes))
+    img = img.transpose(perm + tuple(range(mask.ndim, img.ndim)))
+    mask = mask.transpose(perm)
+    for ax in axes:
+        if np.random.rand() > 0.5:
+            img = np.flip(img, axis=ax)
+            mask = np.flip(mask, axis=ax)
+    return img, mask
+
+def random_intensity_change(img):
+    img = img*np.random.uniform(0.6,2) + np.random.uniform(-0.2,0.2)
+    return img
+
+
+def augmenter(x, y):
+    """Augmentation of a single input/label image pair.
+    x is an input image
+    y is the corresponding ground-truth label image
+    """
+    x, y = random_fliprot(x, y)
+    x = random_intensity_change(x)
+    # add some gaussian noise
+    sig = 0.02*np.random.uniform(0,1)
+    x = x + sig*np.random.normal(0,1,x.shape)
+    return x, y
+
+
 def prepare_data():
     X = sorted(glob('data/images/*.tif'))
     Y = sorted(glob('data/masks/*.tif'))
@@ -102,6 +132,13 @@ def prepare_data():
     print(f"network field of view :  {fov}")
     if any(median_size > fov):
         print("WARNING: median object size larger than field of view of the neural network.")
+
+    # plot some augmented examples
+    img, lbl = X[0], Y[0]
+    plot_img_label(img, lbl)
+    for _ in range(3):
+        img_aug, lbl_aug = augmenter(img, lbl)
+        plot_img_label(img_aug, lbl_aug, img_title="image augmented", lbl_title="label augmented")
 
 
 def main():
