@@ -61,7 +61,7 @@ def augmenter(x, y):
     return x, y
 
 
-def prepare_data():
+def get_data():
     X = sorted(glob('data/images/*.tif'))
     Y = sorted(glob('data/masks/*.tif'))
     assert all(Path(x).name == Path(y).name for x, y in zip(X, Y))
@@ -81,6 +81,10 @@ def prepare_data():
     Y = [fill_label_holes(y) for y in tqdm(Y)]
 
     assert len(X) > 1, "not enough training data"
+    return X, Y, n_channel
+
+
+def split_data(X, Y):
     rng = np.random.RandomState(42)
     ind = rng.permutation(len(X))
     n_val = max(1, int(round(0.15 * len(ind))))
@@ -91,7 +95,6 @@ def prepare_data():
     print('- training:       %3d' % len(X_trn))
     print('- validation:     %3d' % len(X_val))
 
-
     i = min(9, len(X) - 1)
     img, lbl = X[i], Y[i]
     assert img.ndim in (2, 3)
@@ -99,6 +102,11 @@ def prepare_data():
     plot_img_label(img, lbl)
     None;
 
+
+    return X_trn, Y_trn, X_val, Y_val
+
+
+def get_conf(n_channel):
     # 32 is a good default choice (see 1_data.ipynb)
     n_rays = 32
 
@@ -114,9 +122,6 @@ def prepare_data():
         use_gpu=use_gpu,
         n_channel_in=n_channel,
     )
-    print(conf)
-    vars(conf)
-
     if use_gpu:
         from csbdeep.utils.tf import limit_gpu_memory
         # adjust as necessary: limit GPU memory to be used by TensorFlow to leave some to OpenCL-based computations
@@ -124,6 +129,11 @@ def prepare_data():
         # alternatively, try this:
         # limit_gpu_memory(None, allow_growth=True)
 
+    print(conf)
+    vars(conf)
+    return conf
+
+def get_model(conf, X, Y):
     model = StarDist2D(conf, name='stardist', basedir='models')
 
     median_size = calculate_extents(list(Y), np.median)
@@ -140,10 +150,37 @@ def prepare_data():
         img_aug, lbl_aug = augmenter(img, lbl)
         plot_img_label(img_aug, lbl_aug, img_title="image augmented", lbl_title="label augmented")
 
+    return model
+
+
+def train(model, X_trn, Y_trn, X_val, Y_val):
+    quick_demo = True
+
+    if quick_demo:
+        print(
+            "NOTE: This is only for a quick demonstration!\n"
+            "      Please set the variable 'quick_demo = False' for proper (long) training.",
+            file=sys.stderr, flush=True
+        )
+        model.train(X_trn, Y_trn, validation_data=(X_val, Y_val), augmenter=augmenter,
+                    epochs=2, steps_per_epoch=10)
+
+        print("====> Stopping training and loading previously trained demo model from disk.", file=sys.stderr,
+              flush=True)
+        model = StarDist2D.from_pretrained('2D_demo')
+    else:
+        model.train(X_trn, Y_trn, validation_data=(X_val, Y_val), augmenter=augmenter)
+    None;
+
 
 def main():
-    prepare_data()
+    X, Y, n_channel = get_data()
+    X_trn, Y_trn, X_val, Y_val = split_data(X, Y)
+    conf = get_conf(n_channel)
+    model = get_model(conf, X, Y)
+    train(model, X_trn, Y_trn, X_val, Y_val)
     # print(Config2D.__doc__)
+
 
 if __name__ == '__main__':
     main()
