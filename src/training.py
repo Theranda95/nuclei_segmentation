@@ -163,11 +163,11 @@ def train(model, X_trn, Y_trn, X_val, Y_val):
             file=sys.stderr, flush=True
         )
         model.train(X_trn, Y_trn, validation_data=(X_val, Y_val), augmenter=augmenter,
-                    epochs=2, steps_per_epoch=10)
+                    epochs=10, steps_per_epoch=10)
 
-        print("====> Stopping training and loading previously trained demo model from disk.", file=sys.stderr,
-              flush=True)
-        model = StarDist2D.from_pretrained('2D_demo')
+        # print("====> Stopping training and loading previously trained demo model from disk.", file=sys.stderr,
+        #       flush=True)
+        # model = StarDist2D.from_pretrained('2D_demo')
     else:
         model.train(X_trn, Y_trn, validation_data=(X_val, Y_val), augmenter=augmenter)
     None;
