@@ -154,7 +154,7 @@ def get_model(conf, X, Y):
 
 
 def train(model, X_trn, Y_trn, X_val, Y_val):
-    quick_demo = True
+    quick_demo = False
 
     if quick_demo:
         print(
